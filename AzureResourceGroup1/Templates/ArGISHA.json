@@ -1,0 +1,982 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "virtualNetworkName": {
+      "type": "string",
+      "metadata": {
+        "description": "This is the name of the Virtual Network"
+      }
+
+    },
+    "newStorageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "This is the name of the Storage account"
+      }
+    },
+    "proxyDNSPrefix": {
+      "type": "string",
+      "metadata": {
+        "Description": "The DNS Prefix for the proxy Public IP Address"
+      }
+    },
+    "DataServersName": {
+      "type": "string",
+      "metadata": {
+        "description": "This is the prefix name for the Data servers VMs"
+      }
+    },
+    "AdminUserName": {
+      "type": "string",
+      "metadata": {
+        "description": "This is the Admin name for the Data servers VMs"
+      }
+    },
+    "AdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "This is the Admin password for the Data servers VMs"
+      }
+    },
+    "DataServersWindowsOSVersion": {
+      "type": "string",
+      "defaultValue": "2012-R2-Datacenter",
+      "allowedValues": [
+        "2008-R2-SP1",
+        "2012-Datacenter",
+        "2012-R2-Datacenter",
+        "Windows-Server-Technical-Preview"
+      ],
+      "metadata": {
+        "description": "This is the Windows OS version for the Data servers VMs"
+      }
+    },
+    "ServersName": {
+      "type": "string",
+      "metadata": {
+        "description": "This is the prefix name for servers VMs"
+      }
+    },
+    "ServersWindowsOSVersion": {
+      "type": "string",
+      "defaultValue": "2012-R2-Datacenter",
+      "allowedValues": [
+        "2008-R2-SP1",
+        "2012-Datacenter",
+        "2012-R2-Datacenter",
+        "Windows-Server-Technical-Preview"
+      ],
+      "metadata": {
+        "description": "This is the Windows OS version for the servers VMs"
+      }
+    },
+    "PortalServersName": {
+      "type": "string",
+      "metadata": {
+        "description": "This is the prefix name for Portal servers VMs"
+      }
+    },
+    "PortalServersWindowsOSVersion": {
+      "type": "string",
+      "defaultValue": "2012-R2-Datacenter",
+      "allowedValues": [
+        "2008-R2-SP1",
+        "2012-Datacenter",
+        "2012-R2-Datacenter",
+        "Windows-Server-Technical-Preview"
+      ],
+      "metadata": {
+        "description": "This is the Windows OS version for the Portal servers VMs"
+      }
+    },
+    "ProxyServersName": {
+      "type": "string",
+      "metadata": {
+        "description": "This is the prefix name for Proxy servers VMs"
+      }
+    },
+    "ProxyServersWindowsOSVersion": {
+      "type": "string",
+      "defaultValue": "2012-R2-Datacenter",
+      "allowedValues": [
+        "2008-R2-SP1",
+        "2012-Datacenter",
+        "2012-R2-Datacenter",
+        "Windows-Server-Technical-Preview"
+      ],
+      "metadata": {
+        "description": "This is the Windows OS version for the Proxy servers VMs"
+      }
+    }
+
+  },
+  "variables": {
+    "storageAccountType": "Standard_LRS",
+    "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',parameters('virtualNetworkName'))]",
+    "publicIPID": "[resourceId('Microsoft.Network/publicIPAddresses','proxypublicIP')]",
+    "numberOfInstances": 2,
+    "numberOfServerInstances": 3,
+    "DatalbID": "[resourceId('Microsoft.Network/loadBalancers','ArGISDataLB')]",
+    "ServerlbID": "[resourceId('Microsoft.Network/loadBalancers','ArGISServerLB')]",
+    "PortalServerlbID": "[resourceId('Microsoft.Network/loadBalancers','ArGISPortalLB')]",
+    "ProxyServerlbID": "[resourceId('Microsoft.Network/loadBalancers','ArGISProxyLB')]",
+    "ArGISDataServersImagePublisher": "MicrosoftWindowsServer",
+    "ArGISDataServersImageOffer": "WindowsServer",
+    "ArGISDataServersOSDiskName": "DataServersOSDisk",
+    "ArGISDataServersVmSize": "Standard_D1",
+    "ArGISDataServersVnetID": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+    "ArGISDataServersSubnetRef": "[concat(variables('vnetID'), '/subnets/', 'datasubnet')]",
+    "ArGISDataServersStorageAccountContainerName": "vhds",
+    "ArGISServersImagePublisher": "MicrosoftWindowsServer",
+    "ArGISServersImageOffer": "WindowsServer",
+    "ArGISServersOSDiskName": "ServersOSDisk",
+    "ArGISServersVmSize": "Standard_D1",
+    "ArGISServersVnetID": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+    "ArGISServersSubnetRef": "[concat(variables('vnetID'), '/subnets/', 'serversubnet')]",
+    "ArGISServersStorageAccountContainerName": "vhds",
+    "ArGISPortalServersImagePublisher": "MicrosoftWindowsServer",
+    "ArGISPortalServersImageOffer": "WindowsServer",
+    "ArGISPortalServersOSDiskName": "PortalServersOSDisk",
+    "ArGISPortalServersVmSize": "Standard_D1",
+    "ArGISPortalServersVnetID": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+    "ArGISPortalServersSubnetRef": "[concat(variables('vnetID'), '/subnets/', 'portalsubnet')]",
+    "ArGISPortalServersStorageAccountContainerName": "vhds",
+    "ArGISProxyServersImagePublisher": "MicrosoftWindowsServer",
+    "ArGISProxyServersImageOffer": "WindowsServer",
+    "ArGISProxyServersOSDiskName": "ProxyServersOSDisk",
+    "ArGISProxyServersVmSize": "Standard_D1",
+    "ArGISProxyServersVnetID": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+    "ArGISProxyServersSubnetRef": "[concat(variables('vnetID'), '/subnets/', 'proxysubnet')]",
+    "ArGISProxyServersStorageAccountContainerName": "vhds"
+  },
+  "resources": [
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[parameters('newStorageAccountName')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "StorageAccount"
+      },
+      "properties": {
+        "accountType": "[variables('storageAccountType')]"
+      }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "proxypublicIP",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic",
+        "dnsSettings": {
+          "domainNameLabel": "[parameters('proxyDNSPrefix')]"
+        }
+      }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[parameters('virtualNetworkName')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "VirtualNetwork"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "datasubnet",
+            "properties": {
+              "addressPrefix": "10.0.2.0/24"
+            }
+          },
+          {
+            "name": "serversubnet",
+            "properties": {
+              "addressPrefix": "10.0.3.0/24"
+            }
+          },
+          {
+            "name": "portalsubnet",
+            "properties": {
+              "addressPrefix": "10.0.4.0/24"
+            }
+          },
+          {
+            "name": "proxysubnet",
+            "properties": {
+              "addressPrefix": "10.0.5.0/24"
+            }
+          }
+        ]
+      }
+    },
+
+
+
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/loadBalancers",
+      "name": "ArGISDataLB",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "ArGISDataLB"
+      },
+      "dependsOn": [ "[variables('vnetID')]" ],
+      "properties": {
+        "frontendIpConfigurations": [
+          {
+
+            "properties": {
+              "subnet": {
+                "Id": "[variables('ArGISDataServersSubnetRef')]"
+              },
+              "privateIPAddress": "10.0.2.6",
+              "privateIPAllocationMethod": "Static"
+            },
+            "name": "LoadBalancerFrontend"
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "BackendPool1"
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISDataLB'), '/frontendIpConfigurations/LoadBalancerFrontend')]"
+              },
+              "backendAddressPool": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISDataLB'), '/backendAddressPools/BackendPool1')]"
+              },
+              "probe": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISDataLB'), '/probes/lbprobe')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 2443,
+              "backendPort": 2443,
+              "idleTimeoutInMinutes": 15
+
+            },
+            "Name": "lbrule1"
+          },
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISDataLB'), '/frontendIpConfigurations/LoadBalancerFrontend')]"
+              },
+              "backendAddressPool": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISDataLB'), '/backendAddressPools/BackendPool1')]"
+              },
+              "probe": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISDataLB'), '/probes/lbprobe2')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 9876,
+              "backendPort": 9876,
+              "idleTimeoutInMinutes": 15
+
+            },
+            "Name": "lbrule2"
+          }
+         ],
+        "probes": [
+          {
+            "properties": {
+              "protocol": "Tcp",
+              "port": 2443,
+              "intervalInSeconds": 15,
+              "numberOfProbes": 2
+            },
+            "name": "lbprobe"
+          },
+          {
+            "properties": {
+              "protocol": "Tcp",
+              "port": 9876,
+              "intervalInSeconds": 15,
+              "numberOfProbes": 2
+            },
+            "name": "lbprobe2"
+          }
+ 
+        ]
+      }
+    },
+
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/loadBalancers",
+      "name": "ArGISServerLB",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "ArGISServerLB"
+      },
+      "dependsOn": [ "[variables('vnetID')]" ],
+      "properties": {
+        "frontendIpConfigurations": [
+          {
+
+            "properties": {
+              "subnet": {
+                "Id": "[variables('ArGISServersSubnetRef')]"
+              },
+              "privateIPAddress": "10.0.3.6",
+              "privateIPAllocationMethod": "Static"
+            },
+            "name": "LoadBalancerFrontend"
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "BackendPool1"
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISServerLB'), '/frontendIpConfigurations/LoadBalancerFrontend')]"
+              },
+              "backendAddressPool": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISServerLB'), '/backendAddressPools/BackendPool1')]"
+              },
+              "probe": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISServerLB'), '/probes/lbprobe')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 6080,
+              "backendPort": 6080,
+              "idleTimeoutInMinutes": 15
+
+            },
+            "Name": "lbrule1"
+          },
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISServerLB'), '/frontendIpConfigurations/LoadBalancerFrontend')]"
+              },
+              "backendAddressPool": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISServerLB'), '/backendAddressPools/BackendPool1')]"
+              },
+              "probe": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISServerLB'), '/probes/lbprobe2')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 6443,
+              "backendPort": 6443,
+              "idleTimeoutInMinutes": 15
+
+            },
+            "Name": "lbrule2"
+          }
+        ],
+        "probes": [
+          {
+            "properties": {
+              "protocol": "Tcp",
+              "port": 6080,
+              "intervalInSeconds": 15,
+              "numberOfProbes": 2
+            },
+            "name": "lbprobe"
+          },
+          {
+            "properties": {
+              "protocol": "Tcp",
+              "port": 6443,
+              "intervalInSeconds": 15,
+              "numberOfProbes": 2
+            },
+            "name": "lbprobe2"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/loadBalancers",
+      "name": "ArGISPortalLB",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "ArGISPortalLB"
+      },
+      "dependsOn": [ "[variables('vnetID')]" ],
+      "properties": {
+        "frontendIpConfigurations": [
+          {
+
+            "properties": {
+              "subnet": {
+                "Id": "[variables('ArGISPortalServersSubnetRef')]"
+              },
+              "privateIPAddress": "10.0.4.6",
+              "privateIPAllocationMethod": "Static"
+            },
+            "name": "LoadBalancerFrontend"
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "BackendPool1"
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISPortalLB'), '/frontendIpConfigurations/LoadBalancerFrontend')]"
+              },
+              "backendAddressPool": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISPortalLB'), '/backendAddressPools/BackendPool1')]"
+              },
+              "probe": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISPortalLB'), '/probes/lbprobe')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 7080,
+              "backendPort": 7080,
+              "idleTimeoutInMinutes": 15
+
+            },
+            "Name": "lbrule1"
+          },
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISPortalLB'), '/frontendIpConfigurations/LoadBalancerFrontend')]"
+              },
+              "backendAddressPool": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISPortalLB'), '/backendAddressPools/BackendPool1')]"
+              },
+              "probe": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISPortalLB'), '/probes/lbprobe2')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 7443,
+              "backendPort": 7443,
+              "idleTimeoutInMinutes": 15
+
+            },
+            "Name": "lbrule2"
+          }
+        ],
+        "probes": [
+          {
+            "properties": {
+              "protocol": "Tcp",
+              "port": 7080,
+              "intervalInSeconds": 15,
+              "numberOfProbes": 2
+            },
+            "name": "lbprobe"
+          },
+          {
+            "properties": {
+              "protocol": "Tcp",
+              "port": 7443,
+              "intervalInSeconds": 15,
+              "numberOfProbes": 2
+            },
+            "name": "lbprobe2"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/loadBalancers",
+      "name": "ArGISProxyLB",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "ArGISProxyLB"
+      },
+      "dependsOn": [
+        "[variables('vnetID')]",
+        "[variables('publicIPID')]"
+      ],
+      "properties": {
+        "frontendIpConfigurations": [
+          {
+
+            "properties": {
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses','proxypublicIP')]"
+              }
+
+            },
+            "name": "LoadBalancerFrontend"
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "BackendPool1"
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISProxyLB'), '/frontendIpConfigurations/LoadBalancerFrontend')]"
+              },
+              "backendAddressPool": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISProxyLB'), '/backendAddressPools/BackendPool1')]"
+              },
+              "probe": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISProxyLB'), '/probes/lbprobe')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 80,
+              "backendPort": 80,
+              "idleTimeoutInMinutes": 15
+
+            },
+            "Name": "lbrule1"
+          },
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISProxyLB'), '/frontendIpConfigurations/LoadBalancerFrontend')]"
+              },
+              "backendAddressPool": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISProxyLB'), '/backendAddressPools/BackendPool1')]"
+              },
+              "probe": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISProxyLB'), '/probes/lbprobe2')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 443,
+              "backendPort": 443,
+              "idleTimeoutInMinutes": 15
+
+            },
+            "Name": "lbrule2"
+          }
+        ],
+        "probes": [
+          {
+            "properties": {
+              "protocol": "Tcp",
+              "port": 80,
+              "intervalInSeconds": 15,
+              "numberOfProbes": 2
+            },
+            "name": "lbprobe"
+          },
+          {
+            "properties": {
+              "protocol": "Tcp",
+              "port": 443,
+              "intervalInSeconds": 15,
+              "numberOfProbes": 2
+            },
+            "name": "lbprobe2"
+          }
+        ]
+      }
+    },
+    {
+      "name": "[concat(parameters('DataServersName'), copyindex())]",
+      "copy": {
+        "name": "virtualMachineLoop",
+        "count": "[variables('numberOfInstances')]"
+      },
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "dependsOn": [
+        "[concat('Microsoft.Storage/storageAccounts/', parameters('newStorageAccountName'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', 'DataNic', copyindex())]",
+        "[concat('Microsoft.Compute/availabilitySets/', 'ArGISDataAS')]"
+      ],
+      "tags": {
+        "displayName": "ArGISDataServers"
+      },
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets','ArGISDataAS')]"
+        },
+        "hardwareProfile": {
+          "vmSize": "[variables('ArGISDataServersVmSize')]"
+        },
+        "osProfile": {
+          "computername": "[concat(parameters('DataServersName'), copyIndex())]",
+          "adminUsername": "[parameters('AdminUsername')]",
+          "adminPassword": "[parameters('AdminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('ArGISDataServersImagePublisher')]",
+            "offer": "[variables('ArGISDataServersImageOffer')]",
+            "sku": "[parameters('DataServersWindowsOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "ArGISDataServersOSDisk",
+            "vhd": {
+              "uri": "[concat('http://', parameters('newStorageAccountName'), '.blob.core.windows.net/', variables('ArGISDataServersStorageAccountContainerName'), '/', variables('ArGISDataServersOSDiskName'), copyindex(),'.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('DataNic',copyindex()))]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "[concat(parameters('ServersName'), copyindex())]",
+      "copy": {
+        "name": "virtualMachineLoop",
+        "count": "[variables('numberOfServerInstances')]"
+      },
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "dependsOn": [
+        "[concat('Microsoft.Storage/storageAccounts/', parameters('newStorageAccountName'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', 'ServerNic', copyindex())]",
+        "[concat('Microsoft.Compute/availabilitySets/', 'ArGISServerAS')]"
+      ],
+      "tags": {
+        "displayName": "ArGISServers"
+      },
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets','ArGISServerAS')]"
+        },
+        "hardwareProfile": {
+          "vmSize": "[variables('ArGISServersVmSize')]"
+        },
+        "osProfile": {
+          "computername": "[concat(parameters('ServersName'), copyIndex())]",
+          "adminUsername": "[parameters('AdminUsername')]",
+          "adminPassword": "[parameters('AdminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('ArGISServersImagePublisher')]",
+            "offer": "[variables('ArGISServersImageOffer')]",
+            "sku": "[parameters('ServersWindowsOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "ArGISServersOSDisk",
+            "vhd": {
+              "uri": "[concat('http://', parameters('newStorageAccountName'), '.blob.core.windows.net/', variables('ArGISServersStorageAccountContainerName'), '/', variables('ArGISServersOSDiskName'), copyindex(),'.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('ServerNic',copyindex()))]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "[concat(parameters('PortalServersName'), copyindex())]",
+      "copy": {
+        "name": "virtualMachineLoop",
+        "count": "[variables('numberOfInstances')]"
+      },
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "dependsOn": [
+        "[concat('Microsoft.Storage/storageAccounts/', parameters('newStorageAccountName'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', 'PortalNic', copyindex())]",
+        "[concat('Microsoft.Compute/availabilitySets/', 'ArGISPortalAS')]"
+      ],
+      "tags": {
+        "displayName": "ArGISPortalServers"
+      },
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets','ArGISPortalAS')]"
+        },
+        "hardwareProfile": {
+          "vmSize": "[variables('ArGISPortalServersVmSize')]"
+        },
+        "osProfile": {
+          "computername": "[concat(parameters('PortalServersName'), copyIndex())]",
+          "adminUsername": "[parameters('AdminUsername')]",
+          "adminPassword": "[parameters('AdminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('ArGISPortalServersImagePublisher')]",
+            "offer": "[variables('ArGISPortalServersImageOffer')]",
+            "sku": "[parameters('PortalServersWindowsOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "ArGISPortalServersOSDisk",
+            "vhd": {
+              "uri": "[concat('http://', parameters('newStorageAccountName'), '.blob.core.windows.net/', variables('ArGISPortalServersStorageAccountContainerName'), '/', variables('ArGISPortalServersOSDiskName'), copyindex(),'.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('PortalNic',copyindex()))]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "[concat(parameters('ProxyServersName'), copyindex())]",
+      "copy": {
+        "name": "virtualMachineLoop",
+        "count": "[variables('numberOfInstances')]"
+      },
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "dependsOn": [
+        "[concat('Microsoft.Storage/storageAccounts/', parameters('newStorageAccountName'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', 'ProxyNic', copyindex())]",
+        "[concat('Microsoft.Compute/availabilitySets/', 'ArGISProxyAS')]"
+      ],
+      "tags": {
+        "displayName": "ArGISProxyServers"
+      },
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets','ArGISProxyAS')]"
+        },
+        "hardwareProfile": {
+          "vmSize": "[variables('ArGISProxyServersVmSize')]"
+        },
+        "osProfile": {
+          "computername": "[concat(parameters('ProxyServersName'), copyIndex())]",
+          "adminUsername": "[parameters('AdminUsername')]",
+          "adminPassword": "[parameters('AdminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('ArGISProxyServersImagePublisher')]",
+            "offer": "[variables('ArGISProxyServersImageOffer')]",
+            "sku": "[parameters('ProxyServersWindowsOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "ArGISProxyServersOSDisk",
+            "vhd": {
+              "uri": "[concat('http://', parameters('newStorageAccountName'), '.blob.core.windows.net/', variables('ArGISProxyServersStorageAccountContainerName'), '/', variables('ArGISProxyServersOSDiskName'), copyindex(),'.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('ProxyNic',copyindex()))]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "ArGISDataAS",
+      "type": "Microsoft.Compute/availabilitySets",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "tags": {
+        "displayName": "ArGISDataAS"
+      }
+    },
+    {
+      "name": "ArGISServerAS",
+      "type": "Microsoft.Compute/availabilitySets",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "tags": {
+        "displayName": "ArGISServerAS"
+      }
+    },
+    {
+      "name": "ArGISPortalAS",
+      "type": "Microsoft.Compute/availabilitySets",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "tags": {
+        "displayName": "ArGISPortalAS"
+      }
+    },
+    {
+      "name": "ArGISProxyAS",
+      "type": "Microsoft.Compute/availabilitySets",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "tags": {
+        "displayName": "ArGISProxyAS"
+      }
+    },
+    {
+      "name": "[concat('DataNic', copyindex())]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "copy": {
+        "name": "nicLoop",
+        "count": "[variables('numberOfInstances')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/loadBalancers/', 'ArGISDataLB')]"
+      ],
+      "tags": {
+        "displayName": "ArGISDataServersNic"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('ArGISDataServersSubnetRef')]"
+              },
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "[concat(variables('DatalbID'), '/backendAddressPools/BackendPool1')]"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[concat('ServerNic', copyindex())]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "copy": {
+        "name": "nicLoop",
+        "count": "[variables('numberOfServerInstances')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/loadBalancers/', 'ArGISServerLB')]"
+      ],
+      "tags": {
+        "displayName": "ArGISServersNic"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('ArGISServersSubnetRef')]"
+              },
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "[concat(variables('ServerlbID'), '/backendAddressPools/BackendPool1')]"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[concat('PortalNic', copyindex())]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "copy": {
+        "name": "nicLoop",
+        "count": "[variables('numberOfInstances')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/loadBalancers/', 'ArGISPortalLB')]"
+      ],
+      "tags": {
+        "displayName": "ArGISPortalServersNic"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('ArGISPortalServersSubnetRef')]"
+              },
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "[concat(variables('PortalServerlbID'), '/backendAddressPools/BackendPool1')]"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[concat('ProxyNic', copyindex())]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "copy": {
+        "name": "nicLoop",
+        "count": "[variables('numberOfInstances')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/loadBalancers/', 'ArGISProxyLB')]"
+      ],
+      "tags": {
+        "displayName": "ArGISProxyServersNic"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('ArGISProxyServersSubnetRef')]"
+              },
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "[concat(variables('ProxyServerlbID'), '/backendAddressPools/BackendPool1')]"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+
+
+  ]
+}

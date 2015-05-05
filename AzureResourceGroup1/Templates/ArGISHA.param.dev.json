@@ -1,0 +1,33 @@
+﻿{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "virtualNetworkName": {
+            "value": "ArGISvNET"
+        },
+        "newStorageAccountName": {
+            "value": "cippa6"
+        },
+        "DataServersName": {
+            "value": "DataServer"
+        },
+        "AdminUserName": {
+            "value": "DataServerAdmin"
+        },
+        "ServersName": {
+            "value": "Server"
+        },
+        "PortalServersName": {
+            "value": "PortalServer"
+        },
+        "AdminPassword": {
+            "value": "pippopass@word1"
+        },
+        "ProxyServersName": {
+            "value": "ProxyServer"
+        },
+        "proxyDNSPrefix": {
+            "value": "argis"
+        }
+    }
+}
