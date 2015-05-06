@@ -654,7 +654,7 @@
             "version": "latest"
           },
           "osDisk": {
-            "name": "ArGISDataServersOSDisk",
+            "name": "[concat('ArGISDataServersOSDisk',copyIndex())]",
             "vhd": {
               "uri": "[concat('http://', parameters('newStorageAccountName'), '.blob.core.windows.net/', variables('ArGISDataServersStorageAccountContainerName'), '/', variables('ArGISDataServersOSDiskName'), copyindex(),'.vhd')]"
             },
@@ -736,7 +736,7 @@
             "version": "latest"
           },
           "osDisk": {
-            "name": "ArGISServersOSDisk",
+            "name": "[concat('ArGISServersOSDisk',copyIndex())]",
             "vhd": {
               "uri": "[concat('http://', parameters('newStorageAccountName'), '.blob.core.windows.net/', variables('ArGISServersStorageAccountContainerName'), '/', variables('ArGISServersOSDiskName'), copyindex(),'.vhd')]"
             },
@@ -790,7 +790,7 @@
             "version": "latest"
           },
           "osDisk": {
-            "name": "ArGISPortalServersOSDisk",
+            "name": "[concat('ArGISPortalServersOSDisk',copyIndex())]",
             "vhd": {
               "uri": "[concat('http://', parameters('newStorageAccountName'), '.blob.core.windows.net/', variables('ArGISPortalServersStorageAccountContainerName'), '/', variables('ArGISPortalServersOSDiskName'), copyindex(),'.vhd')]"
             },
@@ -844,7 +844,7 @@
             "version": "latest"
           },
           "osDisk": {
-            "name": "ArGISProxyServersOSDisk",
+            "name": "[concat('ArGISProxyServersOSDisk',copyIndex())]",
             "vhd": {
               "uri": "[concat('http://', parameters('newStorageAccountName'), '.blob.core.windows.net/', variables('ArGISProxyServersStorageAccountContainerName'), '/', variables('ArGISProxyServersOSDiskName'), copyindex(),'.vhd')]"
             },
@@ -879,28 +879,25 @@
         "displayName": "ArGISFileServers"
       },
       "properties": {
-        "availabilitySet": {
-          "id": "[resourceId('Microsoft.Compute/availabilitySets','ArGISProxyAS')]"
-        },
         "hardwareProfile": {
-          "vmSize": "[variables('ArGISProxyServersVmSize')]"
+          "vmSize": "[variables('ArGISFileServersVmSize')]"
         },
         "osProfile": {
-          "computername": "[concat(parameters('ProxyServersName'), copyIndex())]",
+          "computername": "[concat(parameters('FileServersName'), copyIndex())]",
           "adminUsername": "[parameters('AdminUsername')]",
           "adminPassword": "[parameters('AdminPassword')]"
         },
         "storageProfile": {
           "imageReference": {
-            "publisher": "[variables('ArGISProxyServersImagePublisher')]",
-            "offer": "[variables('ArGISProxyServersImageOffer')]",
-            "sku": "[parameters('ProxyServersWindowsOSVersion')]",
+            "publisher": "[variables('ArGISFileServersImagePublisher')]",
+            "offer": "[variables('ArGISFileServersImageOffer')]",
+            "sku": "[parameters('FileServersWindowsOSVersion')]",
             "version": "latest"
           },
           "osDisk": {
-            "name": "ArGISProxyServersOSDisk",
+            "name": "[concat('ArGISFileServersOSDisk',copyIndex())]",
             "vhd": {
-              "uri": "[concat('http://', parameters('newStorageAccountName'), '.blob.core.windows.net/', variables('ArGISProxyServersStorageAccountContainerName'), '/', variables('ArGISProxyServersOSDiskName'), copyindex(),'.vhd')]"
+              "uri": "[concat('http://', parameters('newStorageAccountName'), '.blob.core.windows.net/', variables('ArGISFileServersStorageAccountContainerName'), '/', variables('ArGISFileServersOSDiskName'), copyindex(),'.vhd')]"
             },
             "caching": "ReadWrite",
             "createOption": "FromImage"
@@ -909,7 +906,7 @@
         "networkProfile": {
           "networkInterfaces": [
             {
-              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('ProxyNic',copyindex()))]"
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('FileNic',copyindex()))]"
             }
           ]
         }
