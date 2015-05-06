@@ -108,7 +108,27 @@
       "metadata": {
         "description": "This is the Windows OS version for the Proxy servers VMs"
       }
+    },
+       "FileServersName": {
+      "type": "string",
+      "metadata": {
+        "description": "This is the prefix name for Proxy servers VMs"
+      }
+    },
+    "FileServersWindowsOSVersion": {
+      "type": "string",
+      "defaultValue": "2012-R2-Datacenter",
+      "allowedValues": [
+        "2008-R2-SP1",
+        "2012-Datacenter",
+        "2012-R2-Datacenter",
+        "Windows-Server-Technical-Preview"
+      ],
+      "metadata": {
+        "description": "This is the Windows OS version for the Proxy servers VMs"
+      }
     }
+
 
   },
   "variables": {
@@ -117,6 +137,7 @@
     "publicIPID": "[resourceId('Microsoft.Network/publicIPAddresses','proxypublicIP')]",
     "numberOfInstances": 2,
     "numberOfServerInstances": 3,
+    "numberOfFileServerInstances": 1,
     "DatalbID": "[resourceId('Microsoft.Network/loadBalancers','ArGISDataLB')]",
     "ServerlbID": "[resourceId('Microsoft.Network/loadBalancers','ArGISServerLB')]",
     "PortalServerlbID": "[resourceId('Microsoft.Network/loadBalancers','ArGISPortalLB')]",
@@ -128,6 +149,13 @@
     "ArGISDataServersVnetID": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
     "ArGISDataServersSubnetRef": "[concat(variables('vnetID'), '/subnets/', 'datasubnet')]",
     "ArGISDataServersStorageAccountContainerName": "vhds",
+    "ArGISFileServersImagePublisher": "MicrosoftWindowsServer",
+    "ArGISFileServersImageOffer": "WindowsServer",
+    "ArGISFileServersOSDiskName": "FileServersOSDisk",
+    "ArGISFileServersVmSize": "Standard_D1",
+    "ArGISFileServersVnetID": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+    "ArGISFileServersSubnetRef": "[concat(variables('vnetID'), '/subnets/', 'datasubnet')]",
+    "ArGISFileServersStorageAccountContainerName": "vhds",
     "ArGISServersImagePublisher": "MicrosoftWindowsServer",
     "ArGISServersImageOffer": "WindowsServer",
     "ArGISServersOSDiskName": "ServersOSDisk",
@@ -148,7 +176,12 @@
     "ArGISProxyServersVmSize": "Standard_D1",
     "ArGISProxyServersVnetID": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
     "ArGISProxyServersSubnetRef": "[concat(variables('vnetID'), '/subnets/', 'proxysubnet')]",
-    "ArGISProxyServersStorageAccountContainerName": "vhds"
+    "ArGISProxyServersStorageAccountContainerName": "vhds",
+    "customScriptExtensionVersion": "1.2",
+    "scriptURL": "http://luigiscripts.blob.core.windows.net/esri/Config.ps1",
+    "scriptName": "Config.ps1",
+    "scriptArgs": "[concat('-virtualNetworkName ',parameters('virtualNetworkName'),' -newStorageAccountName ',parameters('newStorageAccountName'),' -proxyDNSPrefix ',parameters('proxyDNSPrefix'),' -DataServersName ', parameters('DataServersName'), ' -AdminUserName ', parameters('AdminUserName'), ' -AdminPassword ', parameters('AdminPassword'), ' -DataServersWindowsOSVersion ', parameters('DataServersWindowsOSVersion'), ' -ServersName ', parameters('ServersName'), ' -ServersWindowsOSVersion ', parameters('ServersWindowsOSVersion'), ' -PortalServersName ', parameters('PortalServersName'), ' -ProxyServersWindowsOSVersion ', parameters('ProxyServersWindowsOSVersion'), ' -PortalServersWindowsOSVersion ', parameters('PortalServersWindowsOSVersion'), ' -ProxyServersName ', parameters('ProxyServersName'))]"
+    
   },
   "resources": [
     {
@@ -287,7 +320,7 @@
             },
             "Name": "lbrule2"
           }
-         ],
+        ],
         "probes": [
           {
             "properties": {
@@ -307,7 +340,7 @@
             },
             "name": "lbprobe2"
           }
- 
+
         ]
       }
     },
@@ -636,8 +669,36 @@
             }
           ]
         }
-      }
+      },
+      "resources": [
+        
+      ]
+
     },
+
+     {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(concat(parameters('DataServersName'), copyindex()),'/', 'CustomScriptExtension')]",
+            "copy": {
+              "name": "virtualMachineLoop",
+              "count": "[variables('numberOfInstances')]"
+            },
+            "apiVersion": "2015-05-01-preview",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', concat(parameters('DataServersName'), copyindex()))]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.Compute",
+                "type": "CustomScriptExtension",
+                "typeHandlerVersion": "[variables('customScriptExtensionVersion')]",
+                "settings": {
+                    "fileUris": [ "[variables('scriptURL')]" ],
+                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ',variables('scriptName'),' ',variables('scriptArgs'),' -ServerType DataServer')]"
+                }
+            }
+        },
+
     {
       "name": "[concat(parameters('ServersName'), copyindex())]",
       "copy": {
@@ -692,7 +753,7 @@
         }
       }
     },
-    {
+     {
       "name": "[concat(parameters('PortalServersName'), copyindex())]",
       "copy": {
         "name": "virtualMachineLoop",
@@ -801,6 +862,60 @@
       }
     },
     {
+      "name": "[concat(parameters('FileServersName'), copyindex())]",
+      "copy": {
+        "name": "virtualMachineLoop",
+        "count": "[variables('numberOfFileServerInstances')]"
+      },
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "dependsOn": [
+        "[concat('Microsoft.Storage/storageAccounts/', parameters('newStorageAccountName'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', 'ProxyNic', copyindex())]",
+        "[concat('Microsoft.Compute/availabilitySets/', 'ArGISProxyAS')]"
+      ],
+      "tags": {
+        "displayName": "ArGISFileServers"
+      },
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets','ArGISProxyAS')]"
+        },
+        "hardwareProfile": {
+          "vmSize": "[variables('ArGISProxyServersVmSize')]"
+        },
+        "osProfile": {
+          "computername": "[concat(parameters('ProxyServersName'), copyIndex())]",
+          "adminUsername": "[parameters('AdminUsername')]",
+          "adminPassword": "[parameters('AdminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('ArGISProxyServersImagePublisher')]",
+            "offer": "[variables('ArGISProxyServersImageOffer')]",
+            "sku": "[parameters('ProxyServersWindowsOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "ArGISProxyServersOSDisk",
+            "vhd": {
+              "uri": "[concat('http://', parameters('newStorageAccountName'), '.blob.core.windows.net/', variables('ArGISProxyServersStorageAccountContainerName'), '/', variables('ArGISProxyServersOSDiskName'), copyindex(),'.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('ProxyNic',copyindex()))]"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "ArGISDataAS",
       "type": "Microsoft.Compute/availabilitySets",
       "location": "[resourceGroup().location]",
@@ -866,6 +981,36 @@
                   "id": "[concat(variables('DatalbID'), '/backendAddressPools/BackendPool1')]"
                 }
               ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[concat('FileNic', copyindex())]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "copy": {
+        "name": "nicLoop",
+        "count": "[variables('numberOfFileServerInstances')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
+      ],
+      "tags": {
+        "displayName": "ArGISFileServersNic"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('ArGISFileServersSubnetRef')]"
+              }
+
             }
           }
         ]

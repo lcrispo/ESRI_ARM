@@ -28,6 +28,9 @@
         },
         "proxyDNSPrefix": {
             "value": "argis"
+        },
+        "FileServersName": {
+            "value": "FileServer"
         }
     }
 }
