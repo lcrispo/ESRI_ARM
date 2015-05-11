@@ -136,7 +136,7 @@
     "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',parameters('virtualNetworkName'))]",
     "publicIPID": "[resourceId('Microsoft.Network/publicIPAddresses','proxypublicIP')]",
     "numberOfInstances": 2,
-    "numberOfServerInstances": 3,
+    "numberOfServerInstances": 2,
     "numberOfFileServerInstances": 1,
     "DatalbID": "[resourceId('Microsoft.Network/loadBalancers','ArGISDataLB')]",
     "ServerlbID": "[resourceId('Microsoft.Network/loadBalancers','ArGISServerLB')]",
@@ -753,7 +753,29 @@
         }
       }
     },
-     {
+    {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(concat(parameters('ServersName'), copyindex()),'/', 'CustomScriptExtension')]",
+            "copy": {
+              "name": "virtualMachineLoop",
+              "count": "[variables('numberOfServerInstances')]"
+            },
+            "apiVersion": "2015-05-01-preview",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', concat(parameters('ServersName'), copyindex()))]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.Compute",
+                "type": "CustomScriptExtension",
+                "typeHandlerVersion": "[variables('customScriptExtensionVersion')]",
+                "settings": {
+                    "fileUris": [ "[variables('scriptURL')]" ],
+                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ',variables('scriptName'),' ',variables('scriptArgs'),' -ServerType Server')]"
+                }
+            }
+        },
+    {
       "name": "[concat(parameters('PortalServersName'), copyindex())]",
       "copy": {
         "name": "virtualMachineLoop",
@@ -807,6 +829,28 @@
         }
       }
     },
+    {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(concat(parameters('PortalServersName'), copyindex()),'/', 'CustomScriptExtension')]",
+            "copy": {
+              "name": "virtualMachineLoop",
+              "count": "[variables('numberOfInstances')]"
+            },
+            "apiVersion": "2015-05-01-preview",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', concat(parameters('PortalServersName'), copyindex()))]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.Compute",
+                "type": "CustomScriptExtension",
+                "typeHandlerVersion": "[variables('customScriptExtensionVersion')]",
+                "settings": {
+                    "fileUris": [ "[variables('scriptURL')]" ],
+                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ',variables('scriptName'),' ',variables('scriptArgs'),' -ServerType PortalServer')]"
+                }
+            }
+        },
     {
       "name": "[concat(parameters('ProxyServersName'), copyindex())]",
       "copy": {
@@ -862,6 +906,28 @@
       }
     },
     {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(concat(parameters('ProxyServersName'), copyindex()),'/', 'CustomScriptExtension')]",
+            "copy": {
+              "name": "virtualMachineLoop",
+              "count": "[variables('numberOfInstances')]"
+            },
+            "apiVersion": "2015-05-01-preview",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', concat(parameters('ProxyServersName'), copyindex()))]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.Compute",
+                "type": "CustomScriptExtension",
+                "typeHandlerVersion": "[variables('customScriptExtensionVersion')]",
+                "settings": {
+                    "fileUris": [ "[variables('scriptURL')]" ],
+                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ',variables('scriptName'),' ',variables('scriptArgs'),' -ServerType ProxyServer')]"
+                }
+            }
+        },
+    {
       "name": "[concat(parameters('FileServersName'), copyindex())]",
       "copy": {
         "name": "virtualMachineLoop",
@@ -912,6 +978,28 @@
         }
       }
     },
+    {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(concat(parameters('FileServersName'), copyindex()),'/', 'CustomScriptExtension')]",
+            "copy": {
+              "name": "virtualMachineLoop",
+              "count": "[variables('numberOfFileServerInstances')]"
+            },
+            "apiVersion": "2015-05-01-preview",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', concat(parameters('FileServersName'), copyindex()))]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.Compute",
+                "type": "CustomScriptExtension",
+                "typeHandlerVersion": "[variables('customScriptExtensionVersion')]",
+                "settings": {
+                    "fileUris": [ "[variables('scriptURL')]" ],
+                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ',variables('scriptName'),' ',variables('scriptArgs'),' -ServerType FileServer')]"
+                }
+            }
+        },
     {
       "name": "ArGISDataAS",
       "type": "Microsoft.Compute/availabilitySets",

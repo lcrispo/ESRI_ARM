@@ -3,34 +3,34 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "virtualNetworkName": {
-            "value": "ArGISvNET2"
+            "value": "ArGISvNET"
         },
         "newStorageAccountName": {
-            "value": "cippa62"
+            "value": "esri"
         },
         "DataServersName": {
-            "value": "DataServer2"
+            "value": "DataServer"
         },
         "AdminUserName": {
             "value": "DataServerAdmin"
         },
         "ServersName": {
-            "value": "Server2"
+            "value": "Server"
         },
         "PortalServersName": {
-            "value": "PortalServer2"
+            "value": "PortalServer"
         },
         "AdminPassword": {
             "value": "pippopass@word1"
         },
         "ProxyServersName": {
-            "value": "ProxyServer2"
+            "value": "ProxyServer"
         },
         "proxyDNSPrefix": {
-            "value": "argis2"
+            "value": "argis"
         },
         "FileServersName": {
-            "value": "FileServer2"
+            "value": "FileServer"
         }
     }
 }
