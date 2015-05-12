@@ -31,6 +31,9 @@
         },
         "FileServersName": {
             "value": "FileServer"
+        },
+        "virtualNetworkResourceGroup": {
+            "value": "AzureResourceGroupXX"
         }
     }
 }

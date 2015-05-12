@@ -9,6 +9,13 @@
       }
 
     },
+     "virtualNetworkResourceGroup": {
+      "type": "string",
+      "metadata": {
+        "description": "This is the name of the Virtual Network"
+      }
+
+    },
     "newStorageAccountName": {
       "type": "string",
       "metadata": {
@@ -140,7 +147,6 @@
   },
   "variables": {
     "storageAccountType": "Standard_LRS",
-    "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',parameters('virtualNetworkName'))]",
     "publicIPID": "[resourceId('Microsoft.Network/publicIPAddresses','proxypublicIP')]",
     "numberOfInstances": 2,
     "numberOfServerInstances": 2,
@@ -153,7 +159,7 @@
     "ArGISDataServersImageOffer": "WindowsServer",
     "ArGISDataServersOSDiskName": "DataServersOSDisk",
     "ArGISDataServersVmSize": "Standard_D1",
-    "ArGISDataServersVnetID": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+    "ArGISDataServersVnetID": "[resourceId(parameters('virtualNetworkResourceGroup'),'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
     "ArGISDataServersSubnetRef": "[concat(variables('vnetID'), '/subnets/', 'datasubnet')]",
     "ArGISDataServersStorageAccountContainerName": "vhds",
     "ArGISFileServersImagePublisher": "MicrosoftWindowsServer",
@@ -167,22 +173,21 @@
     "ArGISServersImageOffer": "WindowsServer",
     "ArGISServersOSDiskName": "ServersOSDisk",
     "ArGISServersVmSize": "Standard_D1",
-    "ArGISServersVnetID": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+    "ArGISServersVnetID": "[resourceId(parameters('virtualNetworkResourceGroup'),'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
     "ArGISServersSubnetRef": "[concat(variables('vnetID'), '/subnets/', 'serversubnet')]",
+    "vnetID": "[resourceId(parameters('virtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+    "subnet1Ref": "[concat(variables('vnetID'),'/subnets/', 'serversubnet')]",
+
     "ArGISServersStorageAccountContainerName": "vhds",
     "ArGISPortalServersImagePublisher": "MicrosoftWindowsServer",
     "ArGISPortalServersImageOffer": "WindowsServer",
     "ArGISPortalServersOSDiskName": "PortalServersOSDisk",
     "ArGISPortalServersVmSize": "Standard_D1",
-    "ArGISPortalServersVnetID": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
-    "ArGISPortalServersSubnetRef": "[concat(variables('vnetID'), '/subnets/', 'portalsubnet')]",
     "ArGISPortalServersStorageAccountContainerName": "vhds",
     "ArGISProxyServersImagePublisher": "MicrosoftWindowsServer",
     "ArGISProxyServersImageOffer": "WindowsServer",
     "ArGISProxyServersOSDiskName": "ProxyServersOSDisk",
     "ArGISProxyServersVmSize": "Standard_D1",
-    "ArGISProxyServersVnetID": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
-    "ArGISProxyServersSubnetRef": "[concat(variables('vnetID'), '/subnets/', 'proxysubnet')]",
     "ArGISProxyServersStorageAccountContainerName": "vhds",
     "customScriptExtensionVersion": "1.2",
     "scriptURL": "http://luigiscripts.blob.core.windows.net/esri/Config.ps1",
@@ -193,18 +198,6 @@
 
   },
   "resources": [
-    {
-      "apiVersion": "2015-05-01-preview",
-      "type": "Microsoft.Storage/storageAccounts",
-      "name": "[parameters('newStorageAccountName')]",
-      "location": "[resourceGroup().location]",
-      "tags": {
-        "displayName": "StorageAccount"
-      },
-      "properties": {
-        "accountType": "[variables('storageAccountType')]"
-      }
-    },
     {
       "apiVersion": "2015-05-01-preview",
       "type": "Microsoft.Network/publicIPAddresses",
@@ -219,68 +212,21 @@
     },
     {
       "apiVersion": "2015-05-01-preview",
-      "type": "Microsoft.Network/virtualNetworks",
-      "name": "[parameters('virtualNetworkName')]",
-      "location": "[resourceGroup().location]",
-      "tags": {
-        "displayName": "VirtualNetwork"
-      },
-      "properties": {
-        "addressSpace": {
-          "addressPrefixes": [
-            "10.0.0.0/16"
-          ]
-        },
-        "subnets": [
-          {
-            "name": "datasubnet",
-            "properties": {
-              "addressPrefix": "10.0.2.0/24"
-            }
-          },
-          {
-            "name": "serversubnet",
-            "properties": {
-              "addressPrefix": "10.0.3.0/24"
-            }
-          },
-          {
-            "name": "portalsubnet",
-            "properties": {
-              "addressPrefix": "10.0.4.0/24"
-            }
-          },
-          {
-            "name": "proxysubnet",
-            "properties": {
-              "addressPrefix": "10.0.5.0/24"
-            }
-          }
-        ]
-      }
-    },
-
-
-
-    {
-      "apiVersion": "2015-05-01-preview",
       "type": "Microsoft.Network/loadBalancers",
       "name": "ArGISDataLB",
       "location": "[resourceGroup().location]",
       "tags": {
         "displayName": "ArGISDataLB"
       },
-      "dependsOn": [ "[variables('vnetID')]" ],
       "properties": {
         "frontendIpConfigurations": [
           {
 
             "properties": {
               "subnet": {
-                "Id": "[variables('ArGISDataServersSubnetRef')]"
-              },
-              "privateIPAddress": "10.0.2.6",
-              "privateIPAllocationMethod": "Static"
+                "Id": "[variables('ArGISServersSubnetRef')]"
+              }
+              
             },
             "name": "LoadBalancerFrontend"
           }
@@ -362,7 +308,6 @@
       "tags": {
         "displayName": "ArGISServerLB"
       },
-      "dependsOn": [ "[variables('vnetID')]" ],
       "properties": {
         "frontendIpConfigurations": [
           {
@@ -370,9 +315,8 @@
             "properties": {
               "subnet": {
                 "Id": "[variables('ArGISServersSubnetRef')]"
-              },
-              "privateIPAddress": "10.0.3.6",
-              "privateIPAllocationMethod": "Static"
+              }
+              
             },
             "name": "LoadBalancerFrontend"
           }
@@ -452,17 +396,15 @@
       "tags": {
         "displayName": "ArGISPortalLB"
       },
-      "dependsOn": [ "[variables('vnetID')]" ],
       "properties": {
         "frontendIpConfigurations": [
           {
 
             "properties": {
               "subnet": {
-                "Id": "[variables('ArGISPortalServersSubnetRef')]"
-              },
-              "privateIPAddress": "10.0.4.6",
-              "privateIPAllocationMethod": "Static"
+                "Id": "[variables('ArGISServersSubnetRef')]"
+              }
+              
             },
             "name": "LoadBalancerFrontend"
           }
@@ -543,7 +485,6 @@
         "displayName": "ArGISProxyLB"
       },
       "dependsOn": [
-        "[variables('vnetID')]",
         "[variables('publicIPID')]"
       ],
       "properties": {
@@ -651,7 +592,6 @@
       "location": "[resourceGroup().location]",
       "apiVersion": "2015-05-01-preview",
       "dependsOn": [
-        "[concat('Microsoft.Storage/storageAccounts/', parameters('newStorageAccountName'))]",
         "[concat('Microsoft.Network/networkInterfaces/', 'DataNic', copyindex())]",
         "[concat('Microsoft.Compute/availabilitySets/', 'ArGISDataAS')]"
       ],
@@ -733,7 +673,6 @@
       "location": "[resourceGroup().location]",
       "apiVersion": "2015-05-01-preview",
       "dependsOn": [
-        "[concat('Microsoft.Storage/storageAccounts/', parameters('newStorageAccountName'))]",
         "[concat('Microsoft.Network/networkInterfaces/', 'ServerNic', copyindex())]",
         "[concat('Microsoft.Compute/availabilitySets/', 'ArGISServerAS')]"
       ],
@@ -809,7 +748,6 @@
       "location": "[resourceGroup().location]",
       "apiVersion": "2015-05-01-preview",
       "dependsOn": [
-        "[concat('Microsoft.Storage/storageAccounts/', parameters('newStorageAccountName'))]",
         "[concat('Microsoft.Network/networkInterfaces/', 'PortalNic', copyindex())]",
         "[concat('Microsoft.Compute/availabilitySets/', 'ArGISPortalAS')]"
       ],
@@ -885,7 +823,6 @@
       "location": "[resourceGroup().location]",
       "apiVersion": "2015-05-01-preview",
       "dependsOn": [
-        "[concat('Microsoft.Storage/storageAccounts/', parameters('newStorageAccountName'))]",
         "[concat('Microsoft.Network/networkInterfaces/', 'ProxyNic', copyindex())]",
         "[concat('Microsoft.Compute/availabilitySets/', 'ArGISProxyAS')]"
       ],
@@ -961,7 +898,6 @@
       "location": "[resourceGroup().location]",
       "apiVersion": "2015-05-01-preview",
       "dependsOn": [
-        "[concat('Microsoft.Storage/storageAccounts/', parameters('newStorageAccountName'))]",
         "[concat('Microsoft.Network/networkInterfaces/', 'ProxyNic', copyindex())]",
         "[concat('Microsoft.Compute/availabilitySets/', 'ArGISProxyAS')]"
       ],
@@ -1070,7 +1006,6 @@
         "count": "[variables('numberOfInstances')]"
       },
       "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
         "[concat('Microsoft.Network/loadBalancers/', 'ArGISDataLB')]"
       ],
       "tags": {
@@ -1083,7 +1018,7 @@
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[variables('ArGISDataServersSubnetRef')]"
+                "id": "[variables('ArGISServersSubnetRef')]"
               },
               "loadBalancerBackendAddressPools": [
                 {
@@ -1104,9 +1039,7 @@
         "name": "nicLoop",
         "count": "[variables('numberOfFileServerInstances')]"
       },
-      "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
-      ],
+      
       "tags": {
         "displayName": "ArGISFileServersNic"
       },
@@ -1117,7 +1050,7 @@
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[variables('ArGISFileServersSubnetRef')]"
+                "id": "[variables('ArGISServersSubnetRef')]"
               }
 
             }
@@ -1135,7 +1068,6 @@
         "count": "[variables('numberOfServerInstances')]"
       },
       "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
         "[concat('Microsoft.Network/loadBalancers/', 'ArGISServerLB')]"
       ],
       "tags": {
@@ -1170,7 +1102,6 @@
         "count": "[variables('numberOfInstances')]"
       },
       "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
         "[concat('Microsoft.Network/loadBalancers/', 'ArGISPortalLB')]"
       ],
       "tags": {
@@ -1183,7 +1114,7 @@
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[variables('ArGISPortalServersSubnetRef')]"
+                "id": "[variables('ArGISServersSubnetRef')]"
               },
               "loadBalancerBackendAddressPools": [
                 {
@@ -1201,11 +1132,10 @@
       "location": "[resourceGroup().location]",
       "apiVersion": "2015-05-01-preview",
       "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
         "[concat('Microsoft.Network/loadBalancers/', 'ArGISProxyLB')]"
       ],
       "tags": {
-        "displayName": "ArGISProxyServersNic"
+        "displayName": "ArGISProxyServersNic0"
       },
       "properties": {
         "ipConfigurations": [
@@ -1214,7 +1144,7 @@
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[variables('ArGISProxyServersSubnetRef')]"
+                "id": "[variables('ArGISServersSubnetRef')]"
               },
               "loadBalancerBackendAddressPools": [
                 {
@@ -1232,11 +1162,10 @@
       "location": "[resourceGroup().location]",
       "apiVersion": "2015-05-01-preview",
       "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
         "[concat('Microsoft.Network/loadBalancers/', 'ArGISProxyLB')]"
       ],
       "tags": {
-        "displayName": "ArGISProxyServersNic"
+        "displayName": "ArGISProxyServersNic1"
       },
       "properties": {
         "ipConfigurations": [
@@ -1245,7 +1174,7 @@
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[variables('ArGISProxyServersSubnetRef')]"
+                "id": "[variables('ArGISServersSubnetRef')]"
               },
               "loadBalancerInboundNatRules": [
 								{
