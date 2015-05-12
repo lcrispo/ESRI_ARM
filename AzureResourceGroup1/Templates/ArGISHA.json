@@ -127,8 +127,15 @@
       "metadata": {
         "description": "This is the Windows OS version for the Proxy servers VMs"
       }
-    }
+    },
 
+    "RDPPort":{
+			"type":"int",
+			"metadata": {
+				"Description": "The public RDP port for the VM"
+			},
+			"defaultValue":3389
+		}
 
   },
   "variables": {
@@ -180,8 +187,10 @@
     "customScriptExtensionVersion": "1.2",
     "scriptURL": "http://luigiscripts.blob.core.windows.net/esri/Config.ps1",
     "scriptName": "Config.ps1",
-    "scriptArgs": "[concat('-virtualNetworkName ',parameters('virtualNetworkName'),' -newStorageAccountName ',parameters('newStorageAccountName'),' -proxyDNSPrefix ',parameters('proxyDNSPrefix'),' -DataServersName ', parameters('DataServersName'), ' -AdminUserName ', parameters('AdminUserName'), ' -AdminPassword ', parameters('AdminPassword'), ' -DataServersWindowsOSVersion ', parameters('DataServersWindowsOSVersion'), ' -ServersName ', parameters('ServersName'), ' -ServersWindowsOSVersion ', parameters('ServersWindowsOSVersion'), ' -PortalServersName ', parameters('PortalServersName'), ' -ProxyServersWindowsOSVersion ', parameters('ProxyServersWindowsOSVersion'), ' -PortalServersWindowsOSVersion ', parameters('PortalServersWindowsOSVersion'), ' -ProxyServersName ', parameters('ProxyServersName'))]"
-    
+    "scriptArgs": "[concat('-virtualNetworkName ',parameters('virtualNetworkName'),' -newStorageAccountName ',parameters('newStorageAccountName'),' -proxyDNSPrefix ',parameters('proxyDNSPrefix'),' -DataServersName ', parameters('DataServersName'), ' -AdminUserName ', parameters('AdminUserName'), ' -AdminPassword ', parameters('AdminPassword'), ' -DataServersWindowsOSVersion ', parameters('DataServersWindowsOSVersion'), ' -ServersName ', parameters('ServersName'), ' -ServersWindowsOSVersion ', parameters('ServersWindowsOSVersion'), ' -PortalServersName ', parameters('PortalServersName'), ' -ProxyServersWindowsOSVersion ', parameters('ProxyServersWindowsOSVersion'), ' -PortalServersWindowsOSVersion ', parameters('PortalServersWindowsOSVersion'), ' -ProxyServersName ', parameters('ProxyServersName'))]",
+    "adlbID":"[resourceId('Microsoft.Network/loadBalancers','ArGISProxyLB')]",
+		"adlbFEConfigID":"[concat(variables('adlbID'),'/frontendIPConfigurations/','ArGISProxyLB')]"
+
   },
   "resources": [
     {
@@ -555,6 +564,21 @@
             "name": "BackendPool1"
           }
         ],
+        "inboundNatRules": [
+					{
+						"name": "RDPNAT",
+						"properties": {
+							"frontendIPConfiguration": {
+								"id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'ArGISProxyLB'), '/frontendIpConfigurations/LoadBalancerFrontend')]"
+							},
+							"protocol": "tcp",
+							"frontendPort": "[parameters('RDPPort')]",
+							"backendPort": 3389,
+							"enableFloatingIP": false
+						}
+					}
+				],
+
         "loadBalancingRules": [
           {
             "properties": {
@@ -1172,14 +1196,10 @@
       }
     },
     {
-      "name": "[concat('ProxyNic', copyindex())]",
+      "name": "[concat('ProxyNic', 0)]",
       "type": "Microsoft.Network/networkInterfaces",
       "location": "[resourceGroup().location]",
       "apiVersion": "2015-05-01-preview",
-      "copy": {
-        "name": "nicLoop",
-        "count": "[variables('numberOfInstances')]"
-      },
       "dependsOn": [
         "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
         "[concat('Microsoft.Network/loadBalancers/', 'ArGISProxyLB')]"
@@ -1205,8 +1225,43 @@
           }
         ]
       }
+    },
+    {
+      "name": "[concat('ProxyNic', 1)]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/loadBalancers/', 'ArGISProxyLB')]"
+      ],
+      "tags": {
+        "displayName": "ArGISProxyServersNic"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('ArGISProxyServersSubnetRef')]"
+              },
+              "loadBalancerInboundNatRules": [
+								{
+									"id": "[concat(variables('ProxyServerlbID'), '/inboundNatRules/RDPNAT')]"
+								}
+							],
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "[concat(variables('ProxyServerlbID'), '/backendAddressPools/BackendPool1')]"
+                }
+              ]
+            }
+          }
+        ]
+      }
     }
-
 
   ]
 }
