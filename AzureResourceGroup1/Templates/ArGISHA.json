@@ -642,15 +642,16 @@
 
      {
             "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(concat(parameters('DataServersName'), copyindex()),'/', 'CustomScriptExtension')]",
+            "name": "[concat(parameters('DataServersName'), copyindex(),'/', 'CustomScriptExtension')]",
             "copy": {
-              "name": "virtualMachineLoop",
-              "count": "[variables('numberOfInstances')]"
+                  "name": "virtualMachineLoop",
+                  "count": "[variables('numberOfInstances')]"
             },
             "apiVersion": "2015-05-01-preview",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/', concat(parameters('DataServersName'), copyindex()))]"
+              "[concat('Microsoft.Compute/virtualMachines/', parameters('DataServersName'), copyindex())]",
+              "[concat('Microsoft.Compute/virtualMachines/', parameters('ServersName'), '0','/extensions/', 'CustomScriptExtension')]"
             ],
             "properties": {
                 "publisher": "Microsoft.Compute",
@@ -658,12 +659,11 @@
                 "typeHandlerVersion": "[variables('customScriptExtensionVersion')]",
                 "settings": {
                     "fileUris": [ "[variables('scriptURL')]" ],
-                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ',variables('scriptName'),' ',variables('scriptArgs'),' -ServerType DataServer')]"
+                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ',variables('scriptName'),' ',variables('scriptArgs'),' -ServerType DataServer',' -InstanceNumber ',copyindex(),' -OperationType JoinSite')]"
                 }
             }
         },
-
-    {
+     {
       "name": "[concat(parameters('ServersName'), copyindex())]",
       "copy": {
         "name": "virtualMachineLoop",
@@ -717,16 +717,33 @@
       }
     },
     {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(parameters('ServersName'), '0','/', 'CustomScriptExtension')]",
+      "apiVersion": "2015-05-01-preview",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('ServersName'), '0')]",
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('FileServersName'), '0','/extensions/', 'CustomScriptExtension')]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "[variables('customScriptExtensionVersion')]",
+        "settings": {
+          "fileUris": [ "[variables('scriptURL')]" ],
+          "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ',variables('scriptName'),' ',variables('scriptArgs'),' -ServerType Server',' -InstanceNumber 0',' -OperationType CreateSite')]"
+        }
+      }
+    },
+    {
             "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(concat(parameters('ServersName'), copyindex()),'/', 'CustomScriptExtension')]",
-            "copy": {
-              "name": "virtualMachineLoop",
-              "count": "[variables('numberOfServerInstances')]"
-            },
+            "name": "[concat(parameters('ServersName'), '1','/', 'CustomScriptExtension')]",
             "apiVersion": "2015-05-01-preview",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/', concat(parameters('ServersName'), copyindex()))]"
+              "[concat('Microsoft.Compute/virtualMachines/', concat(parameters('ServersName'), '1'))]",
+              "[concat('Microsoft.Compute/virtualMachines/', parameters('ServersName'), '0','/extensions/', 'CustomScriptExtension')]",
+              "[concat('Microsoft.Compute/virtualMachines/', parameters('FileServersName'), '0','/extensions/', 'CustomScriptExtension')]"
             ],
             "properties": {
                 "publisher": "Microsoft.Compute",
@@ -734,7 +751,7 @@
                 "typeHandlerVersion": "[variables('customScriptExtensionVersion')]",
                 "settings": {
                     "fileUris": [ "[variables('scriptURL')]" ],
-                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ',variables('scriptName'),' ',variables('scriptArgs'),' -ServerType Server')]"
+                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ',variables('scriptName'),' ',variables('scriptArgs'),' -ServerType Server',' -InstanceNumber 1',' -OperationType JoinSite')]"
                 }
             }
         },
@@ -792,28 +809,30 @@
       }
     },
     {
-            "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(concat(parameters('PortalServersName'), copyindex()),'/', 'CustomScriptExtension')]",
-            "copy": {
-              "name": "virtualMachineLoop",
-              "count": "[variables('numberOfInstances')]"
-            },
-            "apiVersion": "2015-05-01-preview",
-            "location": "[resourceGroup().location]",
-            "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/', concat(parameters('PortalServersName'), copyindex()))]"
-            ],
-            "properties": {
-                "publisher": "Microsoft.Compute",
-                "type": "CustomScriptExtension",
-                "typeHandlerVersion": "[variables('customScriptExtensionVersion')]",
-                "settings": {
-                    "fileUris": [ "[variables('scriptURL')]" ],
-                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ',variables('scriptName'),' ',variables('scriptArgs'),' -ServerType PortalServer')]"
-                }
-            }
-        },
-    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(parameters('PortalServersName'), copyindex(),'/', 'CustomScriptExtension')]",
+      "copy": {
+        "name": "virtualMachineLoop",
+        "count": "[variables('numberOfInstances')]"
+      },
+      "apiVersion": "2015-05-01-preview",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('PortalServersName'), copyindex())]",
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('FileServersName'), '0','/extensions/', 'CustomScriptExtension')]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "[variables('customScriptExtensionVersion')]",
+        "settings": {
+          "fileUris": [ "[variables('scriptURL')]" ],
+          "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ',variables('scriptName'),' ',variables('scriptArgs'),' -ServerType PortalServer',' -InstanceNumber ',copyindex(),' -OperationType Federate')]"
+        }
+      }
+    },
+     
+     {
       "name": "[concat(parameters('ProxyServersName'), copyindex())]",
       "copy": {
         "name": "virtualMachineLoop",
@@ -868,7 +887,7 @@
     },
     {
             "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(concat(parameters('ProxyServersName'), copyindex()),'/', 'CustomScriptExtension')]",
+      "name": "[concat(parameters('ProxyServersName'), copyindex(),'/', 'CustomScriptExtension')]",
             "copy": {
               "name": "virtualMachineLoop",
               "count": "[variables('numberOfInstances')]"
@@ -876,7 +895,8 @@
             "apiVersion": "2015-05-01-preview",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/', concat(parameters('ProxyServersName'), copyindex()))]"
+              "[concat('Microsoft.Compute/virtualMachines/',parameters('ProxyServersName'), copyindex())]",
+              "[concat('Microsoft.Compute/virtualMachines/', parameters('ServersName'), '1','/extensions/', 'CustomScriptExtension')]"
             ],
             "properties": {
                 "publisher": "Microsoft.Compute",
@@ -889,17 +909,12 @@
             }
         },
     {
-      "name": "[concat(parameters('FileServersName'), copyindex())]",
-      "copy": {
-        "name": "virtualMachineLoop",
-        "count": "[variables('numberOfFileServerInstances')]"
-      },
+      "name": "[concat(parameters('FileServersName'), '0')]",
       "type": "Microsoft.Compute/virtualMachines",
       "location": "[resourceGroup().location]",
       "apiVersion": "2015-05-01-preview",
       "dependsOn": [
-        "[concat('Microsoft.Network/networkInterfaces/', 'ProxyNic', copyindex())]",
-        "[concat('Microsoft.Compute/availabilitySets/', 'ArGISProxyAS')]"
+        "[concat('Microsoft.Network/networkInterfaces/', 'FileNic', '0')]"
       ],
       "tags": {
         "displayName": "ArGISFileServers"
@@ -909,7 +924,7 @@
           "vmSize": "[variables('ArGISFileServersVmSize')]"
         },
         "osProfile": {
-          "computername": "[concat(parameters('FileServersName'), copyIndex())]",
+          "computername": "[concat(parameters('FileServersName'), '0')]",
           "adminUsername": "[parameters('AdminUsername')]",
           "adminPassword": "[parameters('AdminPassword')]"
         },
@@ -921,9 +936,9 @@
             "version": "latest"
           },
           "osDisk": {
-            "name": "[concat('ArGISFileServersOSDisk',copyIndex())]",
+            "name": "[concat('ArGISFileServersOSDisk','0')]",
             "vhd": {
-              "uri": "[concat('http://', parameters('newStorageAccountName'), '.blob.core.windows.net/', variables('ArGISFileServersStorageAccountContainerName'), '/', variables('ArGISFileServersOSDiskName'), copyindex(),'.vhd')]"
+              "uri": "[concat('http://', parameters('newStorageAccountName'), '.blob.core.windows.net/', variables('ArGISFileServersStorageAccountContainerName'), '/', variables('ArGISFileServersOSDiskName'), '0','.vhd')]"
             },
             "caching": "ReadWrite",
             "createOption": "FromImage"
@@ -932,7 +947,7 @@
         "networkProfile": {
           "networkInterfaces": [
             {
-              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('FileNic',copyindex()))]"
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('FileNic','0'))]"
             }
           ]
         }
@@ -940,15 +955,11 @@
     },
     {
             "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(concat(parameters('FileServersName'), copyindex()),'/', 'CustomScriptExtension')]",
-            "copy": {
-              "name": "virtualMachineLoop",
-              "count": "[variables('numberOfFileServerInstances')]"
-            },
+            "name": "[concat(parameters('FileServersName'), '0','/', 'CustomScriptExtension')]",
             "apiVersion": "2015-05-01-preview",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/', concat(parameters('FileServersName'), copyindex()))]"
+                "[concat('Microsoft.Compute/virtualMachines/', concat(parameters('FileServersName'), '0'))]"
             ],
             "properties": {
                 "publisher": "Microsoft.Compute",
@@ -956,7 +967,7 @@
                 "typeHandlerVersion": "[variables('customScriptExtensionVersion')]",
                 "settings": {
                     "fileUris": [ "[variables('scriptURL')]" ],
-                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ',variables('scriptName'),' ',variables('scriptArgs'),' -ServerType FileServer')]"
+                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ',variables('scriptName'),' ',variables('scriptArgs'),' -ServerType FileServer',' -InstanceNumber 0',' -OperationType CreateFileShare')]"
                 }
             }
         },
